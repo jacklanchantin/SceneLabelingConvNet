@@ -21,12 +21,18 @@ images = {}
 answers = {}
 size = 0;
 --table.insert(images, image.load('iccv09Data/images/0000047.jpg'))
-for filename in io.popen('find stanford/*.jpg | sort -R | head -n 300'):lines() do
+for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 300'):lines() do
     -- Sort -R will randomize the files
     -- head -n x will get the first x training sets.
-    local im = image.load(filename)
+    print(filename)
+    im = image.load(filename)
     -- Open the corresponding region files
-    local file = io.open(filename:sub(0,-4).."regions.txt")
+
+    region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
+
+    file = io.open(region_file)
+
+    
     local answer = {}
     -- The classes are as below:
     -- labels:	1	2		3		4	5
@@ -34,10 +40,10 @@ for filename in io.popen('find stanford/*.jpg | sort -R | head -n 300'):lines() 
     -- 		6	7		8		9
     -- 		water	building	mountain	foreground obj
     for i=1,im:size(2) do
-	answer[i] = {}
-	for j=1,im:size(3) do
-	    answer[i][j] = file:read("*n")+2
-	end
+    	answer[i] = {}
+    	for j=1,im:size(3) do
+    	    answer[i][j] = file:read("*number")+2
+    	end
     end
     size = size+1
     answers[size] =  answer
