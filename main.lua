@@ -4,6 +4,8 @@ require 'nn'
 require 'math'
 require 'utility'
 require 'ModifiedSGD'
+require 'xlua'
+local M = require('moses')
 
 -- NN Statistics
 nInput = 3; 		-- RGB
@@ -13,7 +15,9 @@ fs = {6, 3, 7};		-- Filter Sizes
 pools = {8, 2};		-- Pooling layer sizes
 
 patch_size = patch_size_finder(fs, pools, 1)
-step_pixel = pools[1]*pools[2] -- Hacky solution, assumes 2 pooling layers
+step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1)
+print("Patch size of " .. patch_size)
+print("Step pixel is " .. step_pixel)
 
 -- Building the training set
 -- 1 represents unknown pixel
@@ -21,16 +25,15 @@ images = {}
 answers = {}
 size = 0;
 --table.insert(images, image.load('iccv09Data/images/0000047.jpg'))
-for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 300'):lines() do
+for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 100'):lines() do
     -- Sort -R will randomize the files
     -- head -n x will get the first x training sets.
-    print(filename)
-    im = image.load(filename)
+    local im = image.load(filename)
     -- Open the corresponding region files
 
-    region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
+    local region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
 
-    file = io.open(region_file)
+    local file = io.open(region_file)
 
     
     local answer = {}
@@ -50,30 +53,7 @@ for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 300')
     images[size] = im
 end
 
---[[
-for ind=1,size do
-for x=start_pixel,1,-1 do
-for y=start_pixel,1,-1 do
-local ans = {}
-local k = 0
-local im = nn.SpatialZeroPadding(
-start_pixel-x,x-1,start_pixel-y,y-1)
-:forward(images[ind])
--- Set up the related answer set, since downscaling occurs
-for i=x,images[ind]:size(2),step_pixel do
-for j=y,images[ind]:size(3),step_pixel do
-k = k+1
-ans[k] = answers[ind][i][j]
-end
-end
-ans.size = function () return k end
-training_size = training_size + 1
-training[training_size] =  { im, ans }
-end
-end
-end
-]]
-
+print("Doing downscaling of training examples")
 training_size = 0
 training = {}
 start_pixel = (patch_size+1)/2
@@ -87,29 +67,17 @@ for ind=1,size do
 	    ans[k] = answers[ind][i][j]
 	end
     end
-    answers[ind] = nil
     ans.size = function () return k end
     training_size = training_size + 1
-    training[training_size] =  { images[ind], ans }
-end
-collectgarbage()
-training.size = function () return math.floor(training_size*9/10) end
-training.testSize = function () return training_size end
-print("training size: "..tostring(training.size()))
-print("testing size: "..tostring(training.testSize() - training.size()))
---[[
-training_size = 0
-training = {}
-start_pixel = (patch_size+1)/2
-for ind=1,size do
-training_size = training_size + 1
-training[training_size] =  { images[ind], answers[ind] }
+    training[training_size] =  { images[ind], torch.Tensor(ans) }
+    answers[ind] = nil
+    images[ind] = nil
+    collectgarbage()
 end
 training.size = function () return math.floor(training_size*9/10) end
 training.testSize = function () return training_size end
 print("training size: "..tostring(training.size()))
 print("testing size: "..tostring(training.testSize() - training.size()))
-]]
 
 cnn = nn.Sequential();
 
@@ -139,6 +107,9 @@ criterion = nn.ClassNLLCriterion()
 trainer = nn.StochasticGradient(cnn, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
+curitr = 1
+trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end
+trainer.hookIteration = function(self, iteration)  print("Doing iteration " .. iteration .. "...)"); curitr = 1  end
 trainer:train(training)
 
 --print ("Testing on the first image with classes:")
