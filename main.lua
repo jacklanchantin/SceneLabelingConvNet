@@ -49,6 +49,7 @@ for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 300')
     answers[size] =  answer
     images[size] = im
 end
+
 --[[
 for ind=1,size do
 for x=start_pixel,1,-1 do
