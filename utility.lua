@@ -64,7 +64,7 @@ end
 
 -- Given a torch r x c tensor of integer values from 1 to up to 24, convert it to a
 -- image and write it out. Optionally saves it to filename
-LABELS_TO_IMAGE_CONTRASTING_COLORS = {{2, 63, 165}, {74, 111, 227}, {17, 198, 56}, {15, 207, 192}, {125, 135, 185}, {133, 149, 225}, {141, 213, 147}, {156, 222, 214}, {190, 193, 212}, {181, 187, 227}, {198, 222, 199}, {213, 234, 231}, {214, 188, 192}, {230, 175, 185}, {234, 211, 198}, {243, 225, 235}, {187, 119, 132}, {224, 123, 145}, {240, 185, 141}, {246, 196, 225}, {255, 255, 255}, {211, 63, 106}, {239, 151, 8}, {247, 156, 212}}
+LABELS_TO_IMAGE_CONTRASTING_COLORS = {{255,0,0}, {228,228,0}, {0,255,0}, {0,255,255}, {176,176,255}, {255,0,255}, {228,228,228}, {176,0,0}, {186,186,0}, {0,176,0}, {0,176,176}, {132,132,255}, {176,0,176}, {186,186,186}, {135,0,0}, {135,135,0}, {0,135,0}, {0,135,135}, {73,73,255}, {135,0,135}, {135,135,135}, {85,0,0}, {84,84,0}, {0,85,0}, {0,85,85}, {0,0,255}, {85,0,85}, {84,84,84}}
 LABELS_TO_IMAGE_CONTRASTING_COLORS = M.map(LABELS_TO_IMAGE_CONTRASTING_COLORS, function (k,v) return torch.Tensor(v)/255 end)
 function label2img(labels, filename)
     if labels:nDimension() ~= 2 then return nil end
@@ -82,12 +82,13 @@ end
 
 -- Takes a model, runs our covnet on it, scales it up by some amount, and
 -- writes it out to outfilename
-function test_model(outfilename, modelname, img, scale)
+function test_model(modelname, img, outfilename, scale)
     scale = scale or 1
     local model = torch.load(modelname)
     local out = model:forward(img)
     out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
     local _,labels = out:max(1)
     labels = labels[1]
-    label2img(labels, outfilename)
+    local im = label2img(labels, outfilename)
+    return im
 end
