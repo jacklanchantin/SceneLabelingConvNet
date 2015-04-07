@@ -25,7 +25,7 @@ images = {}
 answers = {}
 size = 0;
 --table.insert(images, image.load('iccv09Data/images/0000047.jpg'))
-for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 100'):lines() do
+for filename in io.popen('find iccv09Data/images/*.jpg | sort -r -R | head -n 1000'):lines() do
     -- Sort -R will randomize the files
     -- head -n x will get the first x training sets.
     local im = image.load(filename)
@@ -38,10 +38,10 @@ for filename in io.popen('find iccv09Data/images/*.jpg | sort -r | head -n 100')
     
     local answer = {}
     -- The classes are as below:
-    -- labels:	1	2		3		4	5
-    -- 		unknown	sky 		tree 		road	grass 
-    -- 		6	7		8		9
-    -- 		water	building	mountain	foreground obj
+    -- labels:	1	    2		    3		    4	    5
+    -- 		    unknown	sky 		tree 		road	grass 
+    -- 		    6	    7		    8		    9
+    -- 		    water	building	mountain	foreground obj
     for i=1,im:size(2) do
     	answer[i] = {}
     	for j=1,im:size(3) do
@@ -95,37 +95,49 @@ cnn:add(nn.SpatialConvolution(nHU2, nClasses, fs[3], fs[3]))
 -- Run through CNN and stich together for full output.
 -- run single time using the outputs
 -- propagate erros back using BPTT
- print(cnn:forward(training[1][1]):size())
+print(cnn:forward(training[1][1]):size())
 
+model = nn.Sequential()
 -- Reorganizes to make suitable for criterion
-cnn:add(nn.Flatten())
-cnn:add(nn.Transpose({1,2}))
-cnn:add(nn.LogSoftMax())
+model:add(cnn)
+model:add(nn.Flatten())
+model:add(nn.Transpose({1,2}))
+model:add(nn.LogSoftMax())
 
+ print(model:forward(training[1][1]):size())
 
 criterion = nn.ClassNLLCriterion()
-trainer = nn.StochasticGradient(cnn, criterion)
+trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
 curitr = 1
 trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end
-trainer.hookIteration = function(self, iteration)  print("Doing iteration " .. iteration .. "...)"); curitr = 1  end
+trainer.hookIteration =
+    function(self, iteration)  
+        print("Doing iteration " .. iteration .. "...)");
+        curitr = 1
+        correct = 0
+        total = 0
+        for i=training.size()+1, training.testSize() do
+            local ans = model:forward(training[i][1]):apply(math.exp)
+            for k=1,ans:size(1) do
+                if ans[k]:max() == ans[k][training[i][2][k]] then correct = correct+1 end
+                total = total+1
+            end
+        end
+        print("we got "..tostring(correct/total*100).."% correct!")
+        print(correct)
+        print(total)
+        local filename = 'model.net'
+        print('==> saving model to '..filename)
+        torch.save(filename, cnn)
+    end
+
 trainer:train(training)
 
 --print ("Testing on the first image with classes:")
 --print(training[training:size()+1][2])
 --print ("Result class probabilities are given: ")
---print (cnn:forward(training[training:size()+1][1]):apply(math.exp))
+--print (model:forward(training[training:size()+1][1]):apply(math.exp))
 
-correct = 0
-total = 0
-for i=training.size()+1, training.testSize() do
-    local ans = cnn:forward(training[i][1]):apply(math.exp)
-    for k=1,ans:size(1) do
-	if ans[k]:max() == ans[k][training[i][2][k]] then correct = correct+1 end
-	total = total+1
-    end
-end
-print("we got "..tostring(correct/total*100).."% correct!")
-print(correct)
-print(total)
+
