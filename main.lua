@@ -55,7 +55,14 @@ end
 
 print("Doing downscaling of training examples")
 training_size = 0
-training = {}
+training = {} -- train/test dataset
+--eg of 1st element of dataset
+--  1 : 
+--     {
+--       1 : DoubleTensor - size: 3x240x320 --> image
+--       2 : DoubleTensor - size: 300 --> labels (downscaled)
+--     }
+
 start_pixel = (patch_size+1)/2
 for ind=1,size do
     local ans = {}
@@ -104,7 +111,7 @@ model:add(nn.Flatten())
 model:add(nn.Transpose({1,2}))
 model:add(nn.LogSoftMax())
 
- print(model:forward(training[1][1]):size())
+print(model:forward(training[1][1]):size())
 
 criterion = nn.ClassNLLCriterion()
 trainer = nn.StochasticGradient(model, criterion)
@@ -118,6 +125,7 @@ trainer.hookIteration =
         curitr = 1
         correct = 0
         total = 0
+        --run model on test set and compare output to groud truth
         for i=training.size()+1, training.testSize() do
             local ans = model:forward(training[i][1]):apply(math.exp)
             for k=1,ans:size(1) do
