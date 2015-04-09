@@ -86,23 +86,31 @@ training.testSize = function () return training_size end
 print("training size: "..tostring(training.size()))
 print("testing size: "..tostring(training.testSize() - training.size()))
 
+----- Create network -----
 cnn = nn.Sequential();
-
 cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
+
+-- Set up Layers --
+
+--Hidden Layer 1
 cnn:add(nn.SpatialConvolution(nInput, nHU1, fs[1], fs[1]))
 cnn:add(nn.SpatialMaxPooling(pools[1], pools[1]))
 cnn:add(nn.Tanh())
 
+--Hidden Layer 2
 cnn:add(nn.SpatialConvolution(nHU1, nHU2, fs[2], fs[2]))
 cnn:add(nn.SpatialMaxPooling(pools[2], pools[2]))
 cnn:add(nn.Tanh())
 
 cnn:add(nn.SpatialConvolution(nHU2, nClasses, fs[3], fs[3]))
 
+
 -- Run through CNN and stich together for full output.
 -- run single time using the outputs
 -- propagate erros back using BPTT
 print(cnn:forward(training[1][1]):size())
+
+----- Create NN Model -----
 
 model = nn.Sequential()
 -- Reorganizes to make suitable for criterion
@@ -140,6 +148,7 @@ trainer.hookIteration =
         print('==> saving model to '..filename)
         torch.save(filename, cnn)
     end
+
 
 trainer:train(training)
 
