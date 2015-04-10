@@ -25,7 +25,7 @@ images = {}
 answers = {}
 size = 0;
 --table.insert(images, image.load('iccv09Data/images/0000047.jpg'))
-for filename in io.popen('find iccv09Data/images/*.jpg | sort -r -R | head -n 1000'):lines() do
+for filename in io.popen('find iccv09Data/images/*.jpg | sort -r -R | head -n  1000'):lines() do
     -- Sort -R will randomize the files
     -- head -n x will get the first x training sets.
     local im = image.load(filename)
@@ -86,31 +86,31 @@ training.testSize = function () return training_size end
 print("training size: "..tostring(training.size()))
 print("testing size: "..tostring(training.testSize() - training.size()))
 
------ Create network -----
+-----[[Create Model]]-----
 cnn = nn.Sequential();
 cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
 
 -- Set up Layers --
 
---Hidden Layer 1
+-- Hidden Layer 1
 cnn:add(nn.SpatialConvolution(nInput, nHU1, fs[1], fs[1]))
 cnn:add(nn.SpatialMaxPooling(pools[1], pools[1]))
 cnn:add(nn.Tanh())
+--cnn:add(nn.ReLU())
 
---Hidden Layer 2
+-- Hidden Layer 2
 cnn:add(nn.SpatialConvolution(nHU1, nHU2, fs[2], fs[2]))
 cnn:add(nn.SpatialMaxPooling(pools[2], pools[2]))
 cnn:add(nn.Tanh())
+--cnn:add(nn.ReLU())
 
 cnn:add(nn.SpatialConvolution(nHU2, nClasses, fs[3], fs[3]))
-
 
 -- Run through CNN and stich together for full output.
 -- run single time using the outputs
 -- propagate erros back using BPTT
 print(cnn:forward(training[1][1]):size())
 
------ Create NN Model -----
 
 model = nn.Sequential()
 -- Reorganizes to make suitable for criterion
@@ -126,7 +126,10 @@ trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
 curitr = 1
-trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end
+
+--hookExample called  during training after each example forwarded and backwarded through the network.
+trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end --
+--hookIteration calledduring training after a complete pass over the dataset.
 trainer.hookIteration =
     function(self, iteration)  
         print("Doing iteration " .. iteration .. "...)");
