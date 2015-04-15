@@ -7,24 +7,59 @@ require 'ModifiedSGD'
 require 'xlua'
 local M = require('moses')
 
+
+if not opt then
+    print '==> processing options'
+    cmd = torch.CmdLine()
+    cmd:text()
+    cmd:option('-layers', '25,50' , 'Hidden Units Per Layer')
+    cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
+    cmd:option('-kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
+    cmd:option('-relu', false, 'use ReLU nonlinearity layers?')
+    cmd:option('-dropout', 0, 'dropout rate (0-1)')
+    cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
+    cmd:text()
+    opt = cmd:parse(arg or {})
+end
+
+
+layers = {}
+kernels = {}
+pools = {}
+
+for i in string.gmatch(opt.layers, "[^,]+") do
+    table.insert(layers, tonumber(i))
+end
+
+for i in string.gmatch(opt.kernels, "[^,]+") do
+    table.insert(kernels, tonumber(i))
+end
+
+for i in string.gmatch(opt.pools, "[^,]+") do
+    table.insert(pools, tonumber(i))
+end
+
+
+
 -- NN Statistics
 nInput = 3; 		-- RGB
 nClasses = 9;		-- The 8 classes in the Stanford Set+1 unknown
-nHU1 = 25; nHU2 = 50;  	-- Hidden Units per layer
-fs = {6, 3, 7};		-- Filter Sizes
-pools = {8, 2};		-- Pooling layer sizes
 
-patch_size = patch_size_finder(fs, pools, 1)
+patch_size = patch_size_finder(kernels, pools, 1)
 step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1)
 print("Patch size of " .. patch_size)
 print("Step pixel is " .. step_pixel)
 
--- Building the training set
+
+---------------------------------------------------------------------------
+----------------------- Building the training set -------------------------
+---------------------------------------------------------------------------
 -- 1 represents unknown pixel
 images = {}
 answers = {}
 size = 0;
 --table.insert(images, image.load('iccv09Data/images/0000047.jpg'))
+--for filename in io.popen('find iccv09Data/images/*.jpg | sort -r -R | head -n  1000'):lines() do
 for filename in io.popen('find iccv09Data/images/*.jpg | sort -r -R | head -n  1000'):lines() do
     -- Sort -R will randomize the files
     -- head -n x will get the first x training sets.
@@ -86,25 +121,49 @@ training.testSize = function () return training_size end
 print("training size: "..tostring(training.size()))
 print("testing size: "..tostring(training.testSize() - training.size()))
 
------[[Create Model]]-----
+
+---------------------------------------------------------------------------
+---------------------------- Creating Model -------------------------------
+---------------------------------------------------------------------------
+--specify nonlinearity
+nonlinearity = nn.Tanh
+if opt.relu then
+    nonlinearity = nn.ReLU
+end
+
+
 cnn = nn.Sequential();
+
+-- Record dropout layers
+opt.dropout_layers = {}
+
+-- input dropout
+if opt.indropout > 0 then
+    local drop = nn.Dropout(opt.indropout)
+    table.insert(opt.dropout_layers, drop)
+    cnn:add(drop)
+end
+
+-- pad for convolution
 cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
 
--- Set up Layers --
 
--- Hidden Layer 1
-cnn:add(nn.SpatialConvolution(nInput, nHU1, fs[1], fs[1]))
-cnn:add(nn.SpatialMaxPooling(pools[1], pools[1]))
-cnn:add(nn.Tanh())
---cnn:add(nn.ReLU())
+layers[0] = nInput
+for L=1, (#layers) do
+    print('creating layer: '..L)
+    cnn:add(nn.SpatialConvolution(layers[L-1], layers[L], kernels[L], kernels[L]))
+    cnn:add(nn.SpatialMaxPooling(pools[L], pools[L]))
+    cnn:add(nonlinearity())
+    -- output dropout
+    if opt.dropout > 0 then
+        local drop = nn.Dropout(opt.dropout)
+        table.insert(opt.dropout_layers, drop)
+        cnn:add(drop)
+    end
+end
 
--- Hidden Layer 2
-cnn:add(nn.SpatialConvolution(nHU1, nHU2, fs[2], fs[2]))
-cnn:add(nn.SpatialMaxPooling(pools[2], pools[2]))
-cnn:add(nn.Tanh())
---cnn:add(nn.ReLU())
+cnn:add(nn.SpatialConvolution(layers[#layers], nClasses, kernels[#kernels], kernels[#kernels]))
 
-cnn:add(nn.SpatialConvolution(nHU2, nClasses, fs[3], fs[3]))
 
 -- Run through CNN and stich together for full output.
 -- run single time using the outputs
@@ -121,7 +180,13 @@ model:add(nn.LogSoftMax())
 
 print(model:forward(training[1][1]):size())
 
+
+---------------------------------------------------------------------------
+----------------------------- Train/Testing -------------------------------
+---------------------------------------------------------------------------
+
 criterion = nn.ClassNLLCriterion()
+
 trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
