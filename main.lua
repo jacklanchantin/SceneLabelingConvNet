@@ -53,7 +53,7 @@ print("Start pixel is " .. start_pixel)
 
 
 ---------------------------------------------------------------------------
------------------------ Building the training set -------------------------
+-------------------------- Building the datasets --------------------------
 ---------------------------------------------------------------------------
 function get_files(setType, numSamples)
     local images = {}
@@ -139,6 +139,7 @@ print("testing size: "..tostring(testing.size()))
 ---------------------------------------------------------------------------
 ---------------------------- Creating Model -------------------------------
 ---------------------------------------------------------------------------
+
 --specify nonlinearity
 nonlinearity = nn.Tanh
 if opt.relu then
@@ -193,18 +194,16 @@ model:add(nn.Transpose({1,2}))
 model:add(nn.LogSoftMax())
 print(model:forward(training[1][1]):size())
 
+criterion = nn.ClassNLLCriterion()
 
 ---------------------------------------------------------------------------
 ----------------------------- Train/Testing -------------------------------
 ---------------------------------------------------------------------------
 
-criterion = nn.ClassNLLCriterion()
-
 trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
 curitr = 1
-
 
 --hookExample called  during training after each example forwarded and backwarded through the network.
 trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end --
