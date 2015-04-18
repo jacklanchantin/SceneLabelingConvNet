@@ -86,9 +86,46 @@ function test_model(modelname, img, outfilename, scale)
     scale = scale or 1
     local model = torch.load(modelname)
     local out = model:forward(img)
+
     out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
+    
+
     local _,labels = out:max(1)
     labels = labels[1]
     local im = label2img(labels, outfilename)
     return im
 end
+
+
+
+function create_folds(numFolds)
+    os.execute("mkdir -p cv_folds")
+    for i=1,numFolds do
+        os.execute("mkdir -p ./cv_folds/fold"..i)
+    end
+
+    k = 0
+    for img_file_name in io.popen('find iccv09Data/images/*.jpg | gsort -r -R'):lines() do
+        local region_file_name = img_file_name:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
+        os.execute("cp "..img_file_name.." ./cv_folds/fold"..((k%5) + 1))
+        os.execute("cp "..region_file_name.." ./cv_folds/fold"..((k%5) + 1))
+        k = k + 1
+    end
+end
+
+
+function create_sets(numFolds,testFold)
+    os.execute("mkdir -p train")
+    os.execute("mkdir -p test")
+
+    for i=1,numFolds do
+        if i == testFold then
+            os.execute("cp ./cv_folds/fold"..i.."/* test/")
+        else
+            os.execute("cp ./cv_folds/fold"..i.."/* train/")
+        end
+    end
+end
+
+
+
