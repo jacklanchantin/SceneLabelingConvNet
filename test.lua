@@ -23,9 +23,6 @@ for filename in io.popen('find test/*.jpg | gsort -r -R | head -n 1'):lines() do
 
     local input = image.load(filename)
 
-    -- print(input:size(2))
-    -- print(input:size(3))
-
     local out = test_model("model.net", input, nil, 16)
 
     local img = torch.zeros(3, out:size(2), out:size(3)+input:size(3))
