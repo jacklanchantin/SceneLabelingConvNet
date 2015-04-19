@@ -45,7 +45,7 @@ nClasses = 9;		-- The 8 classes in the Stanford Set+1 unknown
 
 --finds the input patch size based on size of convolutional and pooling conv_kernels
 patch_size = patch_size_finder(conv_kernels, pools, 1)
-step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1)
+step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1) --product of pooling kernel sizes
 start_pixel = (patch_size+1)/2
 print("Patch size of " .. patch_size)
 print("Step pixel is " .. step_pixel)
@@ -123,7 +123,7 @@ function create_dataset(setType,setSize,downsample)
 end
 
 
-totalSamples = 10
+totalSamples = 200
 training,trainSz = create_dataset('test',totalSamples*0.9,true)
 testing,testSz = create_dataset('train',totalSamples*0.1,true)
 
@@ -157,6 +157,16 @@ if opt.indropout > 0 then
     local drop = nn.Dropout(opt.indropout)
     table.insert(opt.dropout_layers, drop)
     cnn:add(drop)
+end
+
+
+
+--TODO:  Pad image right and bottom by p, pad image left and top by (p-x, p-y)
+for x=1,step_pixel do
+    for y=1,step_pixel do
+        padLeft = start_pixel - x
+        padTop = start_pixel - y
+    end
 end
 
 -- pad for convolution (EACH feature map of given input is padded with specified number of zeros)

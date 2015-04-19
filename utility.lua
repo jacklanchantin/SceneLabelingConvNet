@@ -83,16 +83,85 @@ end
 -- Takes a model, runs our covnet on it, scales it up by some amount, and
 -- writes it out to outfilename
 function test_model(modelname, img, outfilename, scale)
+    print("testing ")
     scale = scale or 1
     local model = torch.load(modelname)
-    local out = model:forward(img)
 
-    out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
+
+    merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
     
+    orig_pad_l = model.modules[1].pad_l
+    orig_pad_t = model.modules[1].pad_t 
 
-    local _,labels = out:max(1)
-    labels = labels[1]
-    local im = label2img(labels, outfilename)
+    labelMap = {}
+    --for each feature map
+    for xMap=0,15 do
+        labelMap[xMap+1] = {}
+        for yMap=0,15 do
+            model.modules[1].pad_l = orig_pad_l - xMap
+            model.modules[1].pad_t = orig_pad_t - yMap
+            -- print(model)
+            local out = model:forward(img)
+            _,labels = out:max(1)
+            labelMap[xMap+1][yMap+1] = labels[1]
+
+            --for each pixel inside the feature map
+            for x=0,((labelMap[xMap+1][yMap+1]:size(2)-1)) do
+                for y=0,((labelMap[xMap+1][yMap+1]:size(1)-1)) do
+                    local mergeX = (16*(x)) + xMap
+                    local mergeY = (16*(y)) + yMap
+                    if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
+                        local currMap = labelMap[xMap+1][yMap+1]
+                        local val = currMap[y+1][x+1]
+                        merged[mergeY+1][mergeX+1] = val
+                    end
+                end
+            end
+
+        end
+    end
+
+    -- --for each feature map
+    -- count = 0
+    -- for xMap=0,15 do
+    --     for yMap=0,15 do
+    --         print(" ")
+    --         print("xMap="..xMap)
+    --         print("yMap="..yMap)
+    --         --for each pixel inside current feature map
+    --         for x=0,((labelMap[xMap+1][yMap+1]:size(2))-1) do
+    --             for y=0,((labelMap[xMap+1][yMap+1]:size(1))-1) do
+    --                 mergeX = (16*(x)) + xMap
+    --                 mergeY = (16*(y)) + yMap
+    --                 if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
+    --                     count = count + 1
+    --                     currMap = labelMap[xMap+1][yMap+1]
+    --                     local val = currMap[y+1][x+1]
+    --                     merged[mergeY+1][mergeX+1] = val
+    --                 end
+    --             end
+    --         end
+    --     end
+    -- end
+
+    model.modules[1].pad_l = orig_pad_l
+    model.modules[1].pad_t = orig_pad_t
+
+
+    --print(merged)
+
+
+    local im = label2img(merged, outfilename)
+
+
+    -- local out = model:forward(img)
+    -- out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
+    -- local _,labels = out:max(1)
+    -- labels = labels[1]
+
+    -- local im = label2img(labels, outfilename)
+
+
     return im
 end
 
@@ -117,7 +186,6 @@ end
 function create_sets(numFolds,testFold)
     os.execute("mkdir -p train")
     os.execute("mkdir -p test")
-
     for i=1,numFolds do
         if i == testFold then
             os.execute("cp ./cv_folds/fold"..i.."/* test/")
