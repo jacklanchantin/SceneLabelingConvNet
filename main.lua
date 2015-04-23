@@ -112,7 +112,6 @@ function create_dataset(setType,setSize,downsample)
             for yMap=0,step_pixel-1 do
 
                 -- Create padded image (includes padding for convolution)
-                print(start_pixel)
                 paddedImg = torch.zeros(3, images[ind]:size(2)+((start_pixel-1)*2)-(yMap), images[ind]:size(3)+((start_pixel-1)*2)-(xMap))
                 for c=1,3 do
                     yS = (start_pixel)-yMap
