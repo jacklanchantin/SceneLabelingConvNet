@@ -89,63 +89,36 @@ function test_model(modelname, img, outfilename, scale)
 
 
     merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
-    
-    orig_pad_l = model.modules[1].pad_l
-    orig_pad_t = model.modules[1].pad_t 
+
 
     labelMap = {}
-    --for each feature map
+    -- for each feature map
     for xMap=0,15 do
         labelMap[xMap+1] = {}
+        print()
         for yMap=0,15 do
-            model.modules[1].pad_l = orig_pad_l - xMap
-            model.modules[1].pad_t = orig_pad_t - yMap
-            -- print(model)
+
+            --print(model)
             local out = model:forward(img)
             _,labels = out:max(1)
             labelMap[xMap+1][yMap+1] = labels[1]
 
-            --for each pixel inside the feature map
+            -- for each pixel inside the feature map
             for x=0,((labelMap[xMap+1][yMap+1]:size(2)-1)) do
                 for y=0,((labelMap[xMap+1][yMap+1]:size(1)-1)) do
                     local mergeX = (16*(x)) + xMap
                     local mergeY = (16*(y)) + yMap
-                    if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
-                        local currMap = labelMap[xMap+1][yMap+1]
-                        local val = currMap[y+1][x+1]
-                        merged[mergeY+1][mergeX+1] = val
-                    end
+                    --if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
+                    local currMap = labelMap[xMap+1][yMap+1]
+                    local val = currMap[y+1][x+1]
+                    merged[mergeY+1][mergeX+1] = val
+                    --end
                 end
             end
 
         end
     end
 
-    -- --for each feature map
-    -- count = 0
-    -- for xMap=0,15 do
-    --     for yMap=0,15 do
-    --         print(" ")
-    --         print("xMap="..xMap)
-    --         print("yMap="..yMap)
-    --         --for each pixel inside current feature map
-    --         for x=0,((labelMap[xMap+1][yMap+1]:size(2))-1) do
-    --             for y=0,((labelMap[xMap+1][yMap+1]:size(1))-1) do
-    --                 mergeX = (16*(x)) + xMap
-    --                 mergeY = (16*(y)) + yMap
-    --                 if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
-    --                     count = count + 1
-    --                     currMap = labelMap[xMap+1][yMap+1]
-    --                     local val = currMap[y+1][x+1]
-    --                     merged[mergeY+1][mergeX+1] = val
-    --                 end
-    --             end
-    --         end
-    --     end
-    -- end
-
-    model.modules[1].pad_l = orig_pad_l
-    model.modules[1].pad_t = orig_pad_t
 
 
     --print(merged)

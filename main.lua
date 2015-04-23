@@ -39,8 +39,8 @@ end
 
 
 -- NN Statistics
-nInput = 3; 		-- RGB
-nClasses = 9;		-- The 8 classes in the Stanford Set+1 unknown
+nInput = 3;         -- RGB
+nClasses = 9;       -- The 8 classes in the Stanford Set+1 unknown
 
 
 --finds the input patch size based on size of convolutional and pooling conv_kernels
@@ -95,39 +95,71 @@ function get_files(setType, numSamples)
 end
 
 function create_dataset(setType,setSize,downsample)
-    images,labels,size = get_files(setType,setSize)
+    images,labels,numImages = get_files(setType,setSize)
+    print("creating "..setType.." dataset")
 
     if not downsample then
         step_pixel = 1
     end
 
     set = {}
-    for ind=1,size do
-        local ans = {}
-        local k = 0
-        -- Set up the related answer set, since downscaling occurs
-        for i=1,images[ind]:size(2),step_pixel do
-            for j=1,images[ind]:size(3),step_pixel do
-                k = k+1
-                ans[k] =labels[ind][i][j]
+    datasetInd = 0
+    for ind=1,numImages do
+        print("image #: "..ind)
+        -- for xMap=0,0 do
+        --     for yMap=0,0 do
+        for xMap=0,step_pixel-1 do
+            for yMap=0,step_pixel-1 do
+
+                -- Create padded image (includes padding for convolution)
+                print(start_pixel)
+                paddedImg = torch.zeros(3, images[ind]:size(2)+((start_pixel-1)*2)-(yMap), images[ind]:size(3)+((start_pixel-1)*2)-(xMap))
+                for c=1,3 do
+                    yS = (start_pixel)-yMap
+                    yF = images[ind]:size(2)+(start_pixel)-(yMap)-1
+                    xS = (start_pixel)-xMap
+                    xF = images[ind]:size(3)+(start_pixel)-(xMap)-1
+                    paddedImg[c][{{yS,yF},{xS,xF}}] = images[ind][c]
+                end
+
+                -- Set up the related answer set, since downscaling occurs
+                local ans = {}
+                local k = 0
+                for i=1,images[ind]:size(2)-xMap,step_pixel do
+                    for j=1,images[ind]:size(3)-yMap,step_pixel do
+                        k = k + 1
+                        ans[k] = labels[ind][i+xMap][j+yMap]
+                    end
+                end
+
+                -- Add image and lables to dataset
+                ans.size = function () return k end
+                datasetInd = datasetInd + 1 
+                set[datasetInd] =  {paddedImg, torch.Tensor(ans)}
+                ans = nil
+                paddedImg = nil
+                collectgarbage()
             end
         end
-        ans.size = function () return k end
-
-        set[ind] =  { images[ind], torch.Tensor(ans) }
         labels[ind] = nil
         images[ind] = nil
         collectgarbage()
     end
-    return set,size
+    return set,datasetInd
 end
 
 
-totalSamples = 200
-training,trainSz = create_dataset('test',totalSamples*0.9,true)
-testing,testSz = create_dataset('train',totalSamples*0.1,true)
 
 
+totalSamples = 10
+-- training,trainSz = create_dataset('test',totalSamples*0.9,true)
+-- testing,testSz = create_dataset('train',totalSamples*0.1,true)
+
+training,trainSz = create_dataset('train',2,true)
+testing,testSz = create_dataset('test',1,true)
+
+
+print(training)
 
 training.size = function () return trainSz end
 testing.size = function () return testSz end
@@ -160,7 +192,6 @@ if opt.indropout > 0 then
 end
 
 
-
 --TODO:  Pad image right and bottom by p, pad image left and top by (p-x, p-y)
 for x=1,step_pixel do
     for y=1,step_pixel do
@@ -170,7 +201,7 @@ for x=1,step_pixel do
 end
 
 -- pad for convolution (EACH feature map of given input is padded with specified number of zeros)
-cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
+--cnn:add(nn.SpatialZeroPadding(start_pixel-(step_pixel)-1))
 
 
 nhu[0] = nInput
@@ -216,7 +247,7 @@ trainer.learningRate = 0.01
 curitr = 1
 
 --hookExample called  during training after each example forwarded and backwarded through the network.
-trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end --
+trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1; print(curitr); end --
 
 --hookIteration called during training after a complete pass over the dataset.
 trainer.hookIteration =
