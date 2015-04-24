@@ -15,9 +15,9 @@ if not opt then
     cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
     cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
     cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
-    cmd:option('-relu', false, 'use ReLU nonlinearity layers?')
-    cmd:option('-dropout', 0, 'dropout rate (0-1)')
-    cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
+    cmd:option('-relu', true, 'use ReLU nonlinearity layers?')
+    cmd:option('-dropout', 0.5, 'dropout rate (0-1)')
+    cmd:option('-indropout', 0.2, 'dropout rate for input (0-1)')
     cmd:text()
     opt = cmd:parse(arg or {})
 end

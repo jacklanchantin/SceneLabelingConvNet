@@ -86,20 +86,23 @@ function test_model(modelname, img, outfilename, scale)
     print("testing ")
     scale = scale or 1
     local model = torch.load(modelname)
-
+    local start_pixel = 67
+    local step_pixel = 16
 
     merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
 
 
     labelMap = {}
     -- for each feature map
-    for xMap=0,15 do
+    for xMap=0,step_pixel-1 do
         labelMap[xMap+1] = {}
         print()
-        for yMap=0,15 do
+        for yMap=0,step_pixel-1 do
 
             --print(model)
-            local out = model:forward(img)
+            paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(img)
+
+            local out = model:forward(paddedImg)
             _,labels = out:max(1)
             labelMap[xMap+1][yMap+1] = labels[1]
 
