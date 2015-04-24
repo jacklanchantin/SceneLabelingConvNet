@@ -1,6 +1,6 @@
                 
 
-                yMap = 1;xMap = 1; 
+                yMap =1;xMap = 1; 
                 start_pixel = 7;
                 step_pixel = 2
                 X = 5
@@ -35,8 +35,8 @@
 
                 ans = {}
                 k = 0
-                for i=1,x:size(1)-xMap,step_pixel do
-                    for j=1,x:size(2)-yMap,step_pixel do
+                for i=1,x:size(1)-yMap,step_pixel do
+                    for j=1,x:size(2)-xMap,step_pixel do
                         k = k + 1
                         ans[k] = labels[i+xMap][j+yMap]
                     end

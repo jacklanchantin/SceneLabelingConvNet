@@ -39,8 +39,8 @@ end
 
 
 -- NN Statistics
-nInput = 3;         -- RGB
-nClasses = 9;       -- The 8 classes in the Stanford Set+1 unknown
+nInput = 3; 		-- RGB
+nClasses = 9;		-- The 8 classes in the Stanford Set+1 unknown
 
 
 --finds the input patch size based on size of convolutional and pooling conv_kernels
@@ -55,25 +55,34 @@ print("Start pixel is " .. start_pixel)
 ---------------------------------------------------------------------------
 -------------------------- Building the datasets --------------------------
 ---------------------------------------------------------------------------
+
+--[[
+ Function: Retrieves images and corresponding labels from test or train dataset 
+ Inputs:
+ 	setType: 'train' or 'test'
+ 	numSamples: number of images to retrieve
+ Outputs:
+ 	images: table of images (3xHeightxWidth)
+ 	answers: table of labels corresponding to a particular image (HeightxWidth)
+ 	size: number of images retrieved
+]]	
 function get_files(setType, numSamples)
     local images = {}
     local answers = {}
     local size = 0;
+  	-- if numsamples == -1, then retrieve all images in set, otherwise retrieve numSamples
     if numSamples == -1 then
         fileString = 'find '..setType..'/*.jpg | sort -r -R'
     else
-        fileString = 'find '..setType..'/*.jpg | sort -r | head -n '..numSamples
+        fileString = 'find '..setType..'/*.jpg | sort -r -R | head -n '..numSamples
     end
-    k = 0
+
     for filename in io.popen(fileString):lines() do
         -- Sort -R will randomize the files
         -- head -n x will get the first x training sets.
-        print(filename)
-		local im = image.load(filename)
-                    print(im:size(2))
-            print(im:size(3))
-        -- Open the corresponding region files
+        local im = image.load(filename)
 
+        -- Open the corresponding region files
         local region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
 
         local file = io.open(region_file)
@@ -90,64 +99,52 @@ function get_files(setType, numSamples)
                 answer[i][j] = file:read("*number")+2
             end
         end
-        if k > 0 then
-            size = size+1
-            answers[size] =  answer
-            images[size] = im
-        end
-        k = 1
+        size = size+1
+        answers[size] =  answer
+        images[size] = im
     end
     return images,answers,size
 end
 
-function create_dataset(setType,setSize,downsample)
-    images,labels,numImages = get_files(setType,setSize)
-    print("creating "..setType.." dataset")
+--[[
+ Function: Creates either train or test dataset, which is composed of "setSize" images
+ Inputs:
+	setType: 'test' or 'train'
+    setSize: number of images to use for this dataset 
+ Outputs:
+ 	set: test or train dataset (table consisting of image and corresponding labels)
+ 	datasetInd: number of samples in dataset
+]]	
+function create_dataset(setType,setSize)
+    images,labels,size = get_files(setType,setSize)
+    print('\n==> Creating '..setType..' dataset ('..setSize..' images)')
 
     set = {}
     datasetInd = 0
-    for ind=1,numImages do
-        print("image #: "..ind)
+    for ind=1,size do
+    	print(setType..' image '..ind)
         -- for xMap=0,0 do
         --     for yMap=0,0 do
         for xMap=0,step_pixel-1 do
             for yMap=0,step_pixel-1 do
-				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap,start_pixel-1,start_pixel-yMap,start_pixel-1):forward(images[ind])
+
+            	-- Pad Image
+				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(images[ind])
 
                 -- Set up the related answer set, since downscaling occurs
                 local ans = {}
                 local k = 0
-
-                
-                -- temp1 = torch.Tensor(labels[ind])
-                -- t2 = torch.Tensor(3,temp1:size(1),temp1:size(2))
-                -- t2[1] = temp1
-
-                -- paddedImg2 = nn.SpatialZeroPadding(step_pixel-xMap-1,step_pixel-1,step_pixel-yMap-1,step_pixel-1):forward(t2)
-
-                -- print("flag")
-                -- print(paddedImg2:size(2))
-                -- print(paddedImg2:size(3))
-                -- for i=1,paddedImg2:size(2)-step_pixel,step_pixel do
-                --     for j=1,images[ind]:size(3)-step_pixel,step_pixel do
-                --         k = k + 1
-                --         print(j+step_pixel-1)
-                --         print(i+step_pixel-1)
-                --         ans[k] = paddedImg2[1][i+step_pixel-1][j+step_pixel-1]
-                --     end
-                -- end
-
-                for i=1,images[ind]:size(2)-xMap,step_pixel do
-                    for j=1,images[ind]:size(3)-yMap,step_pixel do
+                for i=1,images[ind]:size(2)-yMap,step_pixel do
+                    for j=1,images[ind]:size(3)-xMap,step_pixel do
                         k = k + 1
-                        ans[k] = labels[ind][i+xMap][j+yMap]
+                        ans[k] = labels[ind][i+yMap][j+xMap]
                     end
                 end
 
-                -- Add image and lables to dataset
+                -- Add image and labels to dataset
                 ans.size = function () return k end
                 datasetInd = datasetInd + 1 
-                set[datasetInd] =  {paddedImg, torch.Tensor(ans)}
+                set[datasetInd] = {paddedImg, torch.Tensor(ans)}
                 ans = nil
                 paddedImg = nil
                 collectgarbage()
@@ -161,68 +158,57 @@ function create_dataset(setType,setSize,downsample)
 end
 
 
-
-
-totalSamples = 10
--- training,trainSz = create_dataset('test',totalSamples*0.9,true)
--- testing,testSz = create_dataset('train',totalSamples*0.1,true)
-
-training,trainSz = create_dataset('train',2,true)
---testing,testSz = create_dataset('test',1,true)
-
-
--- print(training)
+totalSamples = 200
+-- training,trainSz = create_dataset('test',totalSamples*0.9)
+-- testing,testSz = create_dataset('train',totalSamples*0.1)
+testing,testSz = create_dataset('train',20)
+training,trainSz = create_dataset('test',20)
 
 training.size = function () return trainSz end
---testing.size = function () return testSz end
-print("training size: "..tostring(training.size()))
---print("testing size: "..tostring(testing.size()))
+testing.size = function () return testSz end
 
+print("training size: "..tostring(training.size()))
+print("testing size: "..tostring(testing.size()))
 
 
 ---------------------------------------------------------------------------
 ---------------------------- Creating Model -------------------------------
 ---------------------------------------------------------------------------
+print('\n==> Creating network')
 
---specify nonlinearity
+-- Create Convolutional Network
+cnn = nn.Sequential();
+
+-- Pad for convolution (EACH feature map of given input is padded with specified number of zeros)
+-- *Note*: we do padding manually during the creation of the dataset for the different image maps, so we don't need to here
+-- cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
+
+-- Specify nonlinearity type
 nonlinearity = nn.Tanh
 if opt.relu then
     nonlinearity = nn.ReLU
 end
 
-
-cnn = nn.Sequential();
-
--- Record dropout layers
+-- Table to record dropout layers
 opt.dropout_layers = {}
 
--- input dropout
+-- Add input dropout
 if opt.indropout > 0 then
     local drop = nn.Dropout(opt.indropout)
     table.insert(opt.dropout_layers, drop)
     cnn:add(drop)
 end
 
-
---TODO:  Pad image right and bottom by p, pad image left and top by (p-x, p-y)
-for x=1,step_pixel do
-    for y=1,step_pixel do
-        padLeft = start_pixel - x
-        padTop = start_pixel - y
-    end
-end
-
--- pad for convolution (EACH feature map of given input is padded with specified number of zeros)
---cnn:add(nn.SpatialZeroPadding(start_pixel-(step_pixel)-1))
-
-
+-- Create network layers
 nhu[0] = nInput
 for L=1, (#nhu) do
-    print('creating layer: '..L)
+    print('creating layer '..L)
+
     cnn:add(nn.SpatialConvolution(nhu[L-1], nhu[L], conv_kernels[L], conv_kernels[L]))
     cnn:add(nn.SpatialMaxPooling(pools[L], pools[L]))
     cnn:add(nonlinearity())
-    -- output dropout
+
+    -- Add output dropout
     if opt.dropout > 0 then
         local drop = nn.Dropout(opt.dropout)
         table.insert(opt.dropout_layers, drop)
@@ -230,68 +216,42 @@ for L=1, (#nhu) do
     end
 end
 
+-- Applies a 2D convolution over input image composed of 3 (RGB) input planes
 cnn:add(nn.SpatialConvolution(nhu[#nhu], nClasses, conv_kernels[#conv_kernels], conv_kernels[#conv_kernels]))
 
-
 -- Run through CNN and stich together for full output.
--- run single time using the outputs
--- propagate erros back using BPTT
 print(cnn:forward(training[1][1]):size())
 
-
-model = nn.Sequential()
 -- Reorganizes to make suitable for criterion
+model = nn.Sequential()
 model:add(cnn)
 model:add(nn.Flatten())
 model:add(nn.Transpose({1,2}))
 model:add(nn.LogSoftMax())
+
 print(model:forward(training[1][1]):size())
 
+-- Specify Loss Criterion: we use negative log likelihood for the 9-way classification
 criterion = nn.ClassNLLCriterion()
+
 
 ---------------------------------------------------------------------------
 ----------------------------- Train/Testing -------------------------------
 ---------------------------------------------------------------------------
+print('\n==> Training network')
 
 trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
-trainer.shuffleIndices = false
 curitr = 1
 
 --hookExample called  during training after each example forwarded and backwarded through the network.
-trainer.hookExample = 
-	function(self, iteration) 
-		--xlua.progress(curitr, training.size());
-		curitr = curitr + 1; 
-		if curitr < training.size() then
-            print("")
-			print("--------- ITERATION: "..curitr.." ---------"); 
-			local out = model:forward(training[curitr][1])
-			local output = 0
-			local input = out
-			local target = training[curitr][2]
-            print("training size:")
-            print(training[curitr])
-            print("output size:")
-            print(out:size())
-            print("target:")
-            print(target:size())
-			for i=1,target:size(1) do
-                --print(i)
-                inp = input[i]
-				output = output - inp[target[i]]
-			end
-            --print(criterion:forward(out, training[curitr][2]))
-
-		end
-
-	end
+trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end --
 
 --hookIteration called during training after a complete pass over the dataset.
 trainer.hookIteration =
     function(self, iteration)  
-        print("==> Doing iteration " .. iteration .. "...");
+        print("--> Doing iteration " .. iteration .. "...");
         curitr = 1
         correct = 0
         total = 0
@@ -311,7 +271,7 @@ trainer.hookIteration =
         torch.save(filename, cnn)
     end
 
-
+ --Run Training
 trainer:train(training)
 
 
