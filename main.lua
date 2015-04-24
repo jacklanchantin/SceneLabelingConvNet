@@ -64,12 +64,14 @@ function get_files(setType, numSamples)
     else
         fileString = 'find '..setType..'/*.jpg | sort -r | head -n '..numSamples
     end
-
+    k = 0
     for filename in io.popen(fileString):lines() do
         -- Sort -R will randomize the files
         -- head -n x will get the first x training sets.
         print(filename)
 		local im = image.load(filename)
+                    print(im:size(2))
+            print(im:size(3))
         -- Open the corresponding region files
 
         local region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
@@ -88,9 +90,12 @@ function get_files(setType, numSamples)
                 answer[i][j] = file:read("*number")+2
             end
         end
-        size = size+1
-        answers[size] =  answer
-        images[size] = im
+        if k > 0 then
+            size = size+1
+            answers[size] =  answer
+            images[size] = im
+        end
+        k = 1
     end
     return images,answers,size
 end
@@ -98,10 +103,6 @@ end
 function create_dataset(setType,setSize,downsample)
     images,labels,numImages = get_files(setType,setSize)
     print("creating "..setType.." dataset")
-
-    if not downsample then
-        step_pixel = 1
-    end
 
     set = {}
     datasetInd = 0
@@ -111,22 +112,31 @@ function create_dataset(setType,setSize,downsample)
         --     for yMap=0,0 do
         for xMap=0,step_pixel-1 do
             for yMap=0,step_pixel-1 do
-
-  --[[              -- Create padded image (includes padding for convolution)
-                paddedImg = torch.zeros(3, images[ind]:size(2)+((start_pixel-1)*2)-(yMap), images[ind]:size(3)+((start_pixel-1)*2)-(xMap))
-                for c=1,3 do
-                    yS = (start_pixel)-yMap
-                    yF = images[ind]:size(2)+(start_pixel)-(yMap)-1
-                    xS = (start_pixel)-xMap
-                    xF = images[ind]:size(3)+(start_pixel)-(xMap)-1
-                    paddedImg[c][{{yS,yF},{xS,xF}}] = images[ind][c]
-                end
-]]
-				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(images[ind])
+				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap,start_pixel-1,start_pixel-yMap,start_pixel-1):forward(images[ind])
 
                 -- Set up the related answer set, since downscaling occurs
                 local ans = {}
                 local k = 0
+
+                
+                -- temp1 = torch.Tensor(labels[ind])
+                -- t2 = torch.Tensor(3,temp1:size(1),temp1:size(2))
+                -- t2[1] = temp1
+
+                -- paddedImg2 = nn.SpatialZeroPadding(step_pixel-xMap-1,step_pixel-1,step_pixel-yMap-1,step_pixel-1):forward(t2)
+
+                -- print("flag")
+                -- print(paddedImg2:size(2))
+                -- print(paddedImg2:size(3))
+                -- for i=1,paddedImg2:size(2)-step_pixel,step_pixel do
+                --     for j=1,images[ind]:size(3)-step_pixel,step_pixel do
+                --         k = k + 1
+                --         print(j+step_pixel-1)
+                --         print(i+step_pixel-1)
+                --         ans[k] = paddedImg2[1][i+step_pixel-1][j+step_pixel-1]
+                --     end
+                -- end
+
                 for i=1,images[ind]:size(2)-xMap,step_pixel do
                     for j=1,images[ind]:size(3)-yMap,step_pixel do
                         k = k + 1
@@ -158,15 +168,15 @@ totalSamples = 10
 -- testing,testSz = create_dataset('train',totalSamples*0.1,true)
 
 training,trainSz = create_dataset('train',2,true)
-testing,testSz = create_dataset('test',1,true)
+--testing,testSz = create_dataset('test',1,true)
 
 
-print(training)
+-- print(training)
 
 training.size = function () return trainSz end
-testing.size = function () return testSz end
+--testing.size = function () return testSz end
 print("training size: "..tostring(training.size()))
-print("testing size: "..tostring(testing.size()))
+--print("testing size: "..tostring(testing.size()))
 
 
 
@@ -252,20 +262,28 @@ curitr = 1
 --hookExample called  during training after each example forwarded and backwarded through the network.
 trainer.hookExample = 
 	function(self, iteration) 
-		xlua.progress(curitr, training.size());
+		--xlua.progress(curitr, training.size());
 		curitr = curitr + 1; 
 		if curitr < training.size() then
-			print(curitr); 
-			print(training[curitr])
+            print("")
+			print("--------- ITERATION: "..curitr.." ---------"); 
 			local out = model:forward(training[curitr][1])
 			local output = 0
 			local input = out
 			local target = training[curitr][2]
-				for i=1,target:size(1) do
-					output = output - input[i][target[i]]
-				end
-			print(out:size())
-			print(criterion:forward(out, training[curitr][2]))
+            print("training size:")
+            print(training[curitr])
+            print("output size:")
+            print(out:size())
+            print("target:")
+            print(target:size())
+			for i=1,target:size(1) do
+                --print(i)
+                inp = input[i]
+				output = output - inp[target[i]]
+			end
+            --print(criterion:forward(out, training[curitr][2]))
+
 		end
 
 	end
