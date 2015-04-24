@@ -60,15 +60,16 @@ function get_files(setType, numSamples)
     local answers = {}
     local size = 0;
     if numSamples == -1 then
-        fileString = 'find '..setType..'/*.jpg | gsort -r -R'
+        fileString = 'find '..setType..'/*.jpg | sort -r -R'
     else
-        fileString = 'find '..setType..'/*.jpg | gsort -r -R | head -n '..numSamples
+        fileString = 'find '..setType..'/*.jpg | sort -r | head -n '..numSamples
     end
 
     for filename in io.popen(fileString):lines() do
         -- Sort -R will randomize the files
         -- head -n x will get the first x training sets.
-        local im = image.load(filename)
+        print(filename)
+		local im = image.load(filename)
         -- Open the corresponding region files
 
         local region_file = filename:gsub("images", "labels"):gsub(".jpg", ".regions.txt")
@@ -111,7 +112,7 @@ function create_dataset(setType,setSize,downsample)
         for xMap=0,step_pixel-1 do
             for yMap=0,step_pixel-1 do
 
-                -- Create padded image (includes padding for convolution)
+  --[[              -- Create padded image (includes padding for convolution)
                 paddedImg = torch.zeros(3, images[ind]:size(2)+((start_pixel-1)*2)-(yMap), images[ind]:size(3)+((start_pixel-1)*2)-(xMap))
                 for c=1,3 do
                     yS = (start_pixel)-yMap
@@ -120,6 +121,8 @@ function create_dataset(setType,setSize,downsample)
                     xF = images[ind]:size(3)+(start_pixel)-(xMap)-1
                     paddedImg[c][{{yS,yF},{xS,xF}}] = images[ind][c]
                 end
+]]
+				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(images[ind])
 
                 -- Set up the related answer set, since downscaling occurs
                 local ans = {}
@@ -243,10 +246,29 @@ criterion = nn.ClassNLLCriterion()
 trainer = nn.StochasticGradient(model, criterion)
 trainer.maxIterations = 50
 trainer.learningRate = 0.01
+trainer.shuffleIndices = false
 curitr = 1
 
 --hookExample called  during training after each example forwarded and backwarded through the network.
-trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1; print(curitr); end --
+trainer.hookExample = 
+	function(self, iteration) 
+		xlua.progress(curitr, training.size());
+		curitr = curitr + 1; 
+		if curitr < training.size() then
+			print(curitr); 
+			print(training[curitr])
+			local out = model:forward(training[curitr][1])
+			local output = 0
+			local input = out
+			local target = training[curitr][2]
+				for i=1,target:size(1) do
+					output = output - input[i][target[i]]
+				end
+			print(out:size())
+			print(criterion:forward(out, training[curitr][2]))
+		end
+
+	end
 
 --hookIteration called during training after a complete pass over the dataset.
 trainer.hookIteration =
