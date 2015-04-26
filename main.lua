@@ -11,17 +11,29 @@ local M = require('moses')
 if not opt then
     print '==> processing options'
     cmd = torch.CmdLine()
+    -- cmd:text()
+    -- cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
+    -- cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
+    -- cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
+    -- cmd:option('-nhu', '16,32,64,128,256' , 'Hidden Units Per Layer')
+    -- cmd:option('-pools', '2,2,2,2,2', 'Pooling Layer Sizes')
+    -- cmd:option('-conv_kernels', '6,3,5,3,5,7', 'Kernel Sizes') -- should be size of #layers + 1
     cmd:text()
-    cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
-    cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
-    cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
+    cmd:option('-nhu', '16,32,64,32,16' , 'Hidden Units Per Layer')
+    cmd:option('-pools', '2,2,2,2,2', 'Pooling Layer Sizes')
+    cmd:option('-conv_kernels', '4,3,5,3,5,5', 'Kernel Sizes') -- should be size of #layers + 1
     cmd:option('-relu', true, 'use ReLU nonlinearity layers?')
-    cmd:option('-dropout', 0.5, 'dropout rate (0-1)')
-    cmd:option('-indropout', 0.2, 'dropout rate for input (0-1)')
+    cmd:option('-dropout', 0, 'dropout rate (0-1)')
+    cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
+    cmd:option('-num_train_imgs', 30, 'dropout rate for input (0-1)')
+    cmd:option('-create_shifted_inputs',true, 'shifted downscaling')
+    cmd:option('show_progress_bar',false)
     cmd:text()
     opt = cmd:parse(arg or {})
 end
 
+
+print(opt)
 
 nhu = {}
 conv_kernels = {}
@@ -52,6 +64,7 @@ print("Step pixel is " .. step_pixel)
 print("Start pixel is " .. start_pixel)
 
 
+
 ---------------------------------------------------------------------------
 -------------------------- Building the datasets --------------------------
 ---------------------------------------------------------------------------
@@ -72,7 +85,7 @@ function get_files(setType, numSamples)
     local size = 0;
   	-- if numsamples == -1, then retrieve all images in set, otherwise retrieve numSamples
     if numSamples == -1 then
-        fileString = 'find '..setType..'/*.jpg | sort -r -R'
+        fileString = 'find ./iccv09Data/images/*.jpg | sort -r -R'
     else
         fileString = 'find '..setType..'/*.jpg | sort -r -R | head -n '..numSamples
     end
@@ -122,15 +135,17 @@ function create_dataset(setType,setSize)
     set = {}
     datasetInd = 0
     for ind=1,size do
-    	print(setType..' image '..ind)
-        -- for xMap=0,0 do
-        --     for yMap=0,0 do
-        for xMap=0,step_pixel-1 do
-            for yMap=0,step_pixel-1 do
+    	print('loading '..setType..' image '..ind)
+    	if opt.create_shifted_inputs then
+    		num_shifts = step_pixel-1
+    	else 
+    		num_shifts = 0
+    	end
+        for xMap=0,num_shifts do
+            for yMap=0,num_shifts do
 
             	-- Pad Image
 				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(images[ind])
-
                 -- Set up the related answer set, since downscaling occurs
                 local ans = {}
                 local k = 0
@@ -158,11 +173,15 @@ function create_dataset(setType,setSize)
 end
 
 
-totalSamples = 200
+-- totalSamples = 200
 -- training,trainSz = create_dataset('test',totalSamples*0.9)
 -- testing,testSz = create_dataset('train',totalSamples*0.1)
-testing,testSz = create_dataset('train',20)
-training,trainSz = create_dataset('test',20)
+
+training,trainSz = create_dataset('test',opt.num_train_imgs)
+-- training,trainSz = create_dataset('all',opt.num_train_imgs)
+testing,testSz = create_dataset('train',0)
+
+
 
 training.size = function () return trainSz end
 testing.size = function () return testSz end
@@ -246,7 +265,11 @@ trainer.learningRate = 0.01
 curitr = 1
 
 --hookExample called  during training after each example forwarded and backwarded through the network.
-trainer.hookExample = function(self, iteration) xlua.progress(curitr, training.size()); curitr = curitr + 1 end --
+trainer.hookExample = 
+	function(self, iteration)
+		if(show_progress_bar) then; xlua.progress(curitr, training.size()); end
+		curitr = curitr + 1
+	end --
 
 --hookIteration called during training after a complete pass over the dataset.
 trainer.hookIteration =
@@ -266,7 +289,7 @@ trainer.hookIteration =
         print("we got "..tostring(correct/total*100).."% correct!")
         print(correct)
         print(total)
-        local filename = 'model.net'
+        local filename = 'nhu='..opt.nhu..',pools='..opt.pools..',conv_kernels='..opt.conv_kernels..',droput='..opt.dropout..',indropout='..opt.indropout..',num_images='..opt.num_train_imgs..',shifted_inputs='..tostring(opt.create_shifted_inputs)..'.net'
         print('==> saving model to '..filename)
         torch.save(filename, cnn)
     end

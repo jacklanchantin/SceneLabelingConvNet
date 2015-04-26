@@ -82,21 +82,34 @@ end
 
 -- Takes a model, runs our covnet on it, scales it up by some amount, and
 -- writes it out to outfilename
-function test_model(modelname, img, outfilename, scale)
-    print("testing ")
-    scale = scale or 1
+function test_model(modelname, img, outfilename, filename)
+    print("==> Testing Image "..filename)
     local model = torch.load(modelname)
-    local start_pixel = 67
-    local step_pixel = 16
+
+    conv_kernels = {4,3,5,3,5,5,}
+    pools={2, 2, 2,2 ,2}
+
+
+    patch_size = patch_size_finder(conv_kernels, pools, 1)
+    step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1) --product of pooling kernel sizes
+    start_pixel = (patch_size+1)/2
+    print("Patch size of " .. patch_size)
+    print("Step pixel is " .. step_pixel)
+    print("Start pixel is " .. start_pixel)
+    -- local start_pixel = 67
+    -- local step_pixel = 16
+
+    
+    -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
+    model:evaluate()
+
 
     merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
-
 
     labelMap = {}
     -- for each feature map
     for xMap=0,step_pixel-1 do
         labelMap[xMap+1] = {}
-        print()
         for yMap=0,step_pixel-1 do
 
             --print(model)
@@ -109,8 +122,8 @@ function test_model(modelname, img, outfilename, scale)
             -- for each pixel inside the feature map
             for x=0,((labelMap[xMap+1][yMap+1]:size(2)-1)) do
                 for y=0,((labelMap[xMap+1][yMap+1]:size(1)-1)) do
-                    local mergeX = (16*(x)) + xMap
-                    local mergeY = (16*(y)) + yMap
+                    local mergeX = (step_pixel*(x)) + xMap
+                    local mergeY = (step_pixel*(y)) + yMap
                     --if (mergeX <= merged:size(2)) and (mergeY <= merged:size(1)) then
                     local currMap = labelMap[xMap+1][yMap+1]
                     local val = currMap[y+1][x+1]
