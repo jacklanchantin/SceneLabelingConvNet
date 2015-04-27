@@ -5,15 +5,15 @@ local M = require 'moses'
 function patch_size_finder(fs, pools, iter)
     local start
     if iter == 1 then 
-	start = 1
+        start = 1
     else
-	start = patch_size_finder(fs, pools, iter-1)
+        start = patch_size_finder(fs, pools, iter-1)
     end
-    for i=table.getn(fs),1,-1 do
-	if pools[i] ~= nil then
-	    start = start * pools[i]
-	end
-	start = start + fs[i] - 1
+    for i=#fs,1,-1 do
+        if pools[i] ~= nil then
+            start = start * pools[i]
+        end
+        start = start + fs[i] - 1
     end
     return start
 end
@@ -69,7 +69,7 @@ LABELS_TO_IMAGE_CONTRASTING_COLORS = M.map(LABELS_TO_IMAGE_CONTRASTING_COLORS, f
 function label2img(labels, filename)
     if labels:nDimension() ~= 2 then return nil end
     local img = torch.zeros(3, labels:size(1), labels:size(2))
-    
+
     for x=1,labels:size(1) do
         for y=1,labels:size(2) do
             img[{{}, x, y}] = LABELS_TO_IMAGE_CONTRASTING_COLORS[labels[x][y]]
@@ -79,30 +79,20 @@ function label2img(labels, filename)
     if type(filename) == type("") then image.save(filename, img) end
     return img
 end
-
 -- Takes a model, runs our covnet on it, scales it up by some amount, and
 -- writes it out to outfilename
 function test_model(modelname, img, outfilename, filename)
     print("==> Testing Image "..filename)
-    local model = torch.load(modelname)
+    local time = sys.clock()
 
-    conv_kernels = {4,3,5,3,5,5,}
-    pools={2, 2, 2,2 ,2}
+    local model = torch.load('./Models/'..modelname)
 
+    patch_size = model.patch_size
+    step_pixel = model.step_pixel
+    start_pixel = model.start_pixel
 
-    patch_size = patch_size_finder(conv_kernels, pools, 1)
-    step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1) --product of pooling kernel sizes
-    start_pixel = (patch_size+1)/2
-    print("Patch size of " .. patch_size)
-    print("Step pixel is " .. step_pixel)
-    print("Start pixel is " .. start_pixel)
-    -- local start_pixel = 67
-    -- local step_pixel = 16
-
-    
     -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
     model:evaluate()
-
 
     merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
 
@@ -135,13 +125,7 @@ function test_model(modelname, img, outfilename, filename)
         end
     end
 
-
-
-    --print(merged)
-
-
     local im = label2img(merged, outfilename)
-
 
     -- local out = model:forward(img)
     -- out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
@@ -149,9 +133,9 @@ function test_model(modelname, img, outfilename, filename)
     -- labels = labels[1]
 
     -- local im = label2img(labels, outfilename)
-
-
-    return im
+   time = sys.clock() - time
+   print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
+   return im
 end
 
 
