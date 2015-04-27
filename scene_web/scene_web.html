@@ -1,0 +1,40 @@
+
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+<meta name="description" content="">
+<meta name="author" content="">
+<link rel="icon" href="../../favicon.ico">
+
+<title>Convolution Neural Network for Scene Labeling</title>
+
+</head>
+
+<body>
+
+<div class="container">
+    <div class="header">
+        <h3 class="text-muted">Convolution Neural Network for Scene Labeling</h3>
+    </div>
+
+    <div class="jumbotron">
+        <h1>Select a link!</h1>
+        <p class="lead">This project is aimed to label scenes, so inputting something found from a picture taken of the outside is optimal. It won't do well on synthetic images or macro shots of objects. Supported file formats are JPEG, PNG, PPM and PGM.</p>
+        {{>submit}}
+    </div>
+    <footer class="footer">
+        <p>Zeming Lin and Jack Lanchantin</p>
+        <p>University of Virginia</p>
+    </footer>
+
+</div> <!-- /container -->
+
+</body>
+
+<template name="submit">
+    <p><input id="in" class="form-control" placeholder="Link to an image" /> </p>
+    <p><button class="btn btn-small btn-success" href="#" role="button">Label me!</button></p>
+    <p><div id="image"></div></p>
+</template>
