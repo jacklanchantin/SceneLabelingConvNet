@@ -5,15 +5,15 @@ local M = require 'moses'
 function patch_size_finder(fs, pools, iter)
     local start
     if iter == 1 then 
-	start = 1
+        start = 1
     else
-	start = patch_size_finder(fs, pools, iter-1)
+        start = patch_size_finder(fs, pools, iter-1)
     end
-    for i=table.getn(fs),1,-1 do
-	if pools[i] ~= nil then
-	    start = start * pools[i]
-	end
-	start = start + fs[i] - 1
+    for i=#fs,1,-1 do
+        if pools[i] ~= nil then
+            start = start * pools[i]
+        end
+        start = start + fs[i] - 1
     end
     return start
 end
@@ -69,7 +69,7 @@ LABELS_TO_IMAGE_CONTRASTING_COLORS = M.map(LABELS_TO_IMAGE_CONTRASTING_COLORS, f
 function label2img(labels, filename)
     if labels:nDimension() ~= 2 then return nil end
     local img = torch.zeros(3, labels:size(1), labels:size(2))
-    
+
     for x=1,labels:size(1) do
         for y=1,labels:size(2) do
             img[{{}, x, y}] = LABELS_TO_IMAGE_CONTRASTING_COLORS[labels[x][y]]
@@ -99,7 +99,7 @@ function test_model(modelname, img, outfilename, filename)
     -- local start_pixel = 67
     -- local step_pixel = 16
 
-    
+
     -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
     model:evaluate()
 

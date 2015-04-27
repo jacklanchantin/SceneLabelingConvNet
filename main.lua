@@ -27,7 +27,7 @@ if not opt then
     cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
     cmd:option('-num_train_imgs', 30, 'dropout rate for input (0-1)')
     cmd:option('-create_shifted_inputs',true, 'shifted downscaling')
-    cmd:option('show_progress_bar',false)
+    cmd:option('-show_progress_bar',false)
     cmd:text()
     opt = cmd:parse(arg or {})
 end
@@ -129,48 +129,45 @@ end
  	datasetInd: number of samples in dataset
 ]]	
 function create_dataset(setType,setSize)
-    images,labels,size = get_files(setType,setSize)
+    local images,labels,size = get_files(setType,setSize)
     print('\n==> Creating '..setType..' dataset ('..setSize..' images)')
 
-    set = {}
-    datasetInd = 0
-    for ind=1,size do
-    	print('loading '..setType..' image '..ind)
-    	if opt.create_shifted_inputs then
-    		num_shifts = step_pixel-1
-    	else 
-    		num_shifts = 0
-    	end
-        for xMap=0,num_shifts do
-            for yMap=0,num_shifts do
-
-            	-- Pad Image
-				paddedImg = nn.SpatialZeroPadding(start_pixel-xMap-1,start_pixel-1,start_pixel-yMap-1,start_pixel-1):forward(images[ind])
-                -- Set up the related answer set, since downscaling occurs
-                local ans = {}
-                local k = 0
-                for i=1,images[ind]:size(2)-yMap,step_pixel do
-                    for j=1,images[ind]:size(3)-xMap,step_pixel do
-                        k = k + 1
-                        ans[k] = labels[ind][i+yMap][j+xMap]
-                    end
-                end
-
-                -- Add image and labels to dataset
-                ans.size = function () return k end
-                datasetInd = datasetInd + 1 
-                set[datasetInd] = {paddedImg, torch.Tensor(ans)}
-                ans = nil
-                paddedImg = nil
-                collectgarbage()
-            end
-        end
-        labels[ind] = nil
-        images[ind] = nil
-        collectgarbage()
+    local set = {}
+    local map = {}
+    if opt.create_shifted_inputs then
+        num_shifts = step_pixel-1
+    else
+        num_shifts = 0
     end
-    return set,datasetInd
+
+    setmetatable(set, {
+                 __index = function(self, ind)
+                     -- Pad Image
+                     local xMap = torch.floor(torch.uniform(0, num_shifts-0.000000001))
+                     local yMap = torch.floor(torch.uniform(0, num_shifts-0.000000001))
+                     local tlpad = start_pixel - 1
+                     local brpad = start_pixel - (patch_size % 2)
+                     local paddedImg = nn.SpatialZeroPadding(tlpad-xMap,brpad,tlpad-yMap,brpad):forward(images[ind])
+                     -- Set up the related answer set, since downscaling occurs
+                     local ans = {}
+                     local k = 0
+                     for i=1,images[ind]:size(2)-yMap,step_pixel do
+                         for j=1,images[ind]:size(3)-xMap,step_pixel do
+                             k = k + 1
+                             ans[k] = labels[ind][i+yMap][j+xMap]
+                         end
+                     end
+
+                     -- Add image and labels to dataset
+                     ans.size = function () return k end
+                     collectgarbage()
+                     return {paddedImg, torch.Tensor(ans)}
+                 end
+             })
+
+    return set,size
 end
+
 
 
 -- totalSamples = 200
@@ -267,7 +264,7 @@ curitr = 1
 --hookExample called  during training after each example forwarded and backwarded through the network.
 trainer.hookExample = 
 	function(self, iteration)
-		if(show_progress_bar) then; xlua.progress(curitr, training.size()); end
+		if opt.show_progress_bar then xlua.progress(curitr, training.size()) end
 		curitr = curitr + 1
 	end --
 
