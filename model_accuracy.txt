@@ -1,0 +1,8 @@
+nhu=128,128,128,128,128,pools=2,2,2,2,2,conv_kernels=4,4,4,4,4,4,droput=0,indropout=0,num_images=-1,shifted_inputs=false.net,26.984126984127
+nhu=128,128,128,64,64,pools=2,2,2,2,2,conv_kernels=4,4,4,4,4,4,droput=0,indropout=0,num_images=-1,shifted_inputs=false.net,23.611111111111
+/if19/jjl5sw/GitHub/Scene-Labeling-Conv-Net/Models/nhu=128,128,128,128,128,pools=2,2,2,2,2,conv_kernels=4,4,4,4,4,4,droput=0,indropout=0,num_images=-1,shifted_inputs=false.net,41.333333333333
+/if19/jjl5sw/GitHub/Scene-Labeling-Conv-Net/Models/nhu=128,128,128,64,64,pools=2,2,2,2,2,conv_kernels=4,4,4,4,4,4,droput=0,indropout=0,num_images=-1,shifted_inputs=false.net,12.5
+/if19/jjl5sw/GitHub/Scene-Labeling-Conv-Net/Models/nhu=16,32,64,128,128,pools=2,2,2,2,2,conv_kernels=4,3,5,3,5,5,droput=0.5,indropout=0.2,num_images=-1,shifted_inputs=false.net,15.384615384615
+nhu=16,32,64,128,128,pools=2,2,2,2,2,conv_kernels=4,3,5,3,5,5,droput=0.5,indropout=0.2,num_images=-1,shifted_inputs=false.net
+nhu=16,32,64,128,256,pools=2,2,2,2,2,conv_kernels=6,3,5,3,5,7,droput=0,indropout=0,num_images=500,shifted_inputs=false.net
+nhu=16,32,64,pools=2,2,2,conv_kernels=4,3,3,7,droput=0,indropout=0,num_images=50,shifted_inputs=false.net

@@ -1,6 +1,11 @@
 *.swp
 *.net
+*.jpg
+<<<<<<< HEAD
 *.out
 *.jpg
 .bashrc
+=======
+sampleimg/*
+>>>>>>> 46ecffd26fd649c19725329a5d9cbad7a028a73a
 

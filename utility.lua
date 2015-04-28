@@ -126,13 +126,6 @@ function test_model(modelname, img, outfilename, filename)
     end
 
     local im = label2img(merged, outfilename)
-
-    -- local out = model:forward(img)
-    -- out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
-    -- local _,labels = out:max(1)
-    -- labels = labels[1]
-
-    -- local im = label2img(labels, outfilename)
    time = sys.clock() - time
    print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
    return im
