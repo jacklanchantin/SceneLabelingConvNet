@@ -21,7 +21,7 @@
 
     <div class="jumbotron">
         <h1>Select a link!</h1>
-        <p class="lead">This project is aimed to label scenes, so inputting something found from a picture taken of the outside is optimal. It won't do well on synthetic images or macro shots of objects. Supported file formats are JPEG, PNG, PPM and PGM.</p>
+        <p class="lead">This project is aimed to label scenes, so inputting something found from a picture taken of the outside is optimal. It won't do well on synthetic images or macro shots of objects. Supported file formats are JPEG, PNG, PPM and PGM. Large pictures will be downsized so our servers can handle it!</p>
         {{>submit}}
     </div>
     <footer class="footer">
@@ -35,6 +35,6 @@
 
 <template name="submit">
     <p><input id="in" class="form-control" placeholder="Link to an image" /> </p>
-    <p><button class="btn btn-small btn-success" href="#" role="button">Label me!</button></p>
+    <p><button id="label" class="btn btn-small btn-success" href="#" role="button">Label me!</button><div class="lead" id="msg">Please wait...</div></p>
     <p><div id="image"></div></p>
 </template>

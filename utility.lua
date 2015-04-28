@@ -85,7 +85,7 @@ function test_model(modelname, img, outfilename, filename)
     print("==> Testing Image "..filename)
     local time = sys.clock()
 
-    local model = torch.load('./Models/'..modelname)
+    local model = torch.load(modelname)
 
     patch_size = model.patch_size
     step_pixel = model.step_pixel

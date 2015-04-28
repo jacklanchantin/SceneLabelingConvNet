@@ -1,17 +1,19 @@
 if (Meteor.isClient) {
     Template.submit.events({
         'click button': function () {
+            $("#label").hide();
+            $("#msg").show();
             var link = $("#in").val();
             Meteor.call("getPicture", link, function(error, res) { 
                 if (error) alert("Something went wrong!");
                 var elem = "<img width=600px src=\""+res+"\" / >";
-                //$("#image").prepend(elem);
                 Session.set("Image", elem);
             });
         }
     });
     Template.submit.rendered = function() {
         var elem = Session.get("Image");
+        $("#msg").hide();
         if (elem) $("#image").prepend(elem);
     }
 }
