@@ -11,17 +11,17 @@ local M = require('moses')
 if not opt then
     print '==> processing options'
     cmd = torch.CmdLine()
-    -- cmd:text()
-    -- cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
-    -- cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
-    -- cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
+    cmd:text()
+    cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
+    cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
+    cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
     -- cmd:option('-nhu', '16,32,64,128,256' , 'Hidden Units Per Layer')
     -- cmd:option('-pools', '2,2,2,2,2', 'Pooling Layer Sizes')
     -- cmd:option('-conv_kernels', '6,3,5,3,5,7', 'Kernel Sizes') -- should be size of #layers + 1
-    cmd:text()
-    cmd:option('-nhu', '16,32,64,32,16' , 'Hidden Units Per Layer')
-    cmd:option('-pools', '2,2,2,2,2', 'Pooling Layer Sizes')
-    cmd:option('-conv_kernels', '4,3,5,3,5,5', 'Kernel Sizes') -- should be size of #layers + 1
+
+    -- cmd:option('-nhu', '64,64,32,32' , 'Hidden Units Per Layer')
+    -- cmd:option('-pools', '2,2,2,2', 'Pooling Layer Sizes')
+    -- cmd:option('-conv_kernels', '4,4,4,4,4', 'Kernel Sizes') -- should be size of #layers + 1
     cmd:option('-relu', true, 'use ReLU nonlinearity layers?')
     cmd:option('-dropout', 0, 'dropout rate (0-1)')
     cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
@@ -83,7 +83,7 @@ function get_files(setType, numSamples)
     local images = {}
     local answers = {}
     local size = 0;
-  	-- if numsamples == -1, then retrieve all images in set, otherwise retrieve numSamples
+    -- if numsamples == -1, then retrieve all images in set, otherwise retrieve numSamples
     if numSamples == -1 then
         fileString = 'find ./iccv09Data/images/*.jpg | sort -r -R'
     else
@@ -118,7 +118,6 @@ function get_files(setType, numSamples)
     end
     return images,answers,size
 end
-
 --[[
  Function: Creates either train or test dataset, which is composed of "setSize" images
  Inputs:
@@ -137,7 +136,7 @@ function create_dataset(setType,setSize)
     if opt.create_shifted_inputs then
         num_shifts = step_pixel-1
     else
-        num_shifts = 0
+        num_shifts = 1
     end
 
     setmetatable(set, {
@@ -151,6 +150,7 @@ function create_dataset(setType,setSize)
                      -- Set up the related answer set, since downscaling occurs
                      local ans = {}
                      local k = 0
+
                      for i=1,images[ind]:size(2)-yMap,step_pixel do
                          for j=1,images[ind]:size(3)-xMap,step_pixel do
                              k = k + 1
@@ -174,9 +174,9 @@ end
 -- training,trainSz = create_dataset('test',totalSamples*0.9)
 -- testing,testSz = create_dataset('train',totalSamples*0.1)
 
-training,trainSz = create_dataset('test',opt.num_train_imgs)
+training,trainSz = create_dataset('train',opt.num_train_imgs)
 -- training,trainSz = create_dataset('all',opt.num_train_imgs)
-testing,testSz = create_dataset('train',0)
+testing,testSz = create_dataset('test',0)
 
 
 
@@ -244,6 +244,10 @@ model:add(cnn)
 model:add(nn.Flatten())
 model:add(nn.Transpose({1,2}))
 model:add(nn.LogSoftMax())
+
+model.step_pixel = step_pixel
+model.patch_size = patch_size
+model.start_pixel= start_pixel
 
 print(model:forward(training[1][1]):size())
 

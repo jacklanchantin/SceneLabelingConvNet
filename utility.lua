@@ -4,7 +4,9 @@ local M = require 'moses'
 
 function patch_size_finder(fs, pools, iter)
     local start
-    if iter == 1 then start = 1 else
+    if iter == 1 then 
+        start = 1
+    else
         start = patch_size_finder(fs, pools, iter-1)
     end
     for i=#fs,1,-1 do
@@ -77,16 +79,17 @@ function label2img(labels, filename)
     if type(filename) == type("") then image.save(filename, img) end
     return img
 end
-
 -- Takes a model, runs our covnet on it, scales it up by some amount, and
 -- writes it out to outfilename
 function test_model(modelname, img, outfilename, filename)
     print("==> Testing Image "..filename)
-    local model = torch.load(modelname)
+    local time = sys.clock()
 
-    local patch_size = model.patch_size
-    local step_pixel = model.step_pixel
-    local start_pixel = model.start_pixel
+    local model = torch.load('./Models/'..modelname)
+
+    patch_size = model.patch_size
+    step_pixel = model.step_pixel
+    start_pixel = model.start_pixel
 
     -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
     model:evaluate()
@@ -123,7 +126,9 @@ function test_model(modelname, img, outfilename, filename)
     end
 
     local im = label2img(merged, outfilename)
-    return im
+   time = sys.clock() - time
+   print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
+   return im
 end
 
 
