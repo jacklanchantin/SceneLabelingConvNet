@@ -1,0 +1,12 @@
+nhu=16,32,64,128,128,pools=2,2,2,2,2,conv_kernels=4,3,5,3,5,5,droput=0.5,indropout=0.2,num_images=-1,shifted_inputs=false.net
+nhu=16,32,64,128,256,pools=2,2,2,2,2,conv_kernels=6,3,5,3,5,7,droput=0,indropout=0,num_images=500,shifted_inputs=false.net
+nhu=16,32,64,pools=2,2,2,conv_kernels=4,3,3,7,droput=0,indropout=0,num_images=50,shifted_inputs=false.net
+nhu=16-32-64-128-128-pools=2-2-2-2-2-conv_kernels=4-3-5-3-5-5-droput=0.5-indropout=0.2-num_images=-1-shifted_inputs=false.net,39.736842105263
+nhu=16-32-64-128-256-pools=2-2-2-2-2-conv_kernels=6-3-5-3-5-7-droput=0-indropout=0-num_images=500-shifted_inputs=false.net,56.315789473684
+nhu=16-32-64-pools=2-2-2-conv_kernels=4-3-3-7-droput=0-indropout=0-num_images=50-shifted_inputs=false.net,36.257961783439
+nhu=16-32-64-128-128-pools=2-2-2-2-2-conv_kernels=4-3-5-3-5-5-droput=0.5-indropout=0.2-num_images=-1-shifted_inputs=false.net,52.702702702703
+nhu=16-32-64-128-256-pools=2-2-2-2-2-conv_kernels=6-3-5-3-5-7-droput=0-indropout=0-num_images=500-shifted_inputs=false.net,60.540540540541
+nhu=16-32-64-pools=2-2-2-conv_kernels=4-3-3-7-droput=0-indropout=0-num_images=50-shifted_inputs=false.net,34.566666666667
+nhu=16-32-64-128-128-pools=2-2-2-2-2-conv_kernels=4-3-5-3-5-5-droput=0.5-indropout=0.2-num_images=-1-shifted_inputs=false.net,57.179487179487
+nhu=16-32-64-128-256-pools=2-2-2-2-2-conv_kernels=6-3-5-3-5-7-droput=0-indropout=0-num_images=500-shifted_inputs=false.net,67.567567567568
+nhu=16-32-64-pools=2-2-2-conv_kernels=4-3-3-7-droput=0-indropout=0-num_images=50-shifted_inputs=false.net,41.785714285714

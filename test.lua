@@ -16,9 +16,10 @@ make_comp()
 -- Example of how to test our model
 for filename in io.popen('find test/*.jpg | sort -r -R | head -n 10'):lines() do
     --filename = './test/9004581.jpg'
+    -- filename = 'large_test_img.jpg'
     local bn = paths.basename(filename)
     local input = image.load(filename)
-    local out = test_model("nhu=6,32,64,32,16,pools=2,2,2,2,2,conv_kernels=4,3,5,3,5,5,droput=0,indropout=0,num_images=500,shifted_inputs=false.net", input, nil, filename)
+    local out = test_model("nhu=32,64,pools=8,2,conv_kernels=6,3,7,droput=0.5,indropout=0.2,num_images=500,shifted_inputs=false.net", input, nil, filename)
     local img = torch.zeros(3, out:size(2), out:size(3)+input:size(3))
     img[{{},{},{input:size(3)+1, out:size(3)+input:size(3)}}] = out
     img[{{},{1,input:size(2)},{1, input:size(3)}}] = input

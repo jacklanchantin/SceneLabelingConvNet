@@ -12,22 +12,19 @@ if not opt then
     print '==> processing options'
     cmd = torch.CmdLine()
     cmd:text()
-    cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
-    cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
-    cmd:option('-conv_kernels', '6,3,7', 'Kernel Sizes') -- should be size of #layers + 1
-    -- cmd:option('-nhu', '16,32,64,128,256' , 'Hidden Units Per Layer')
-    -- cmd:option('-pools', '2,2,2,2,2', 'Pooling Layer Sizes')
-    -- cmd:option('-conv_kernels', '6,3,5,3,5,7', 'Kernel Sizes') -- should be size of #layers + 1
-
-    -- cmd:option('-nhu', '64,64,32,32' , 'Hidden Units Per Layer')
-    -- cmd:option('-pools', '2,2,2,2', 'Pooling Layer Sizes')
-    -- cmd:option('-conv_kernels', '4,4,4,4,4', 'Kernel Sizes') -- should be size of #layers + 1
+    -- cmd:option('-nhu', '25,50' , 'Hidden Units Per Layer')
+    -- cmd:option('-pools', '8,2', 'Pooling Layer Sizes')
+    -- cmd:option('-conv_kernels', '6,5,7', 'Kernel Sizes') -- should be size of #layers + 1
+    cmd:option('-nhu', '32,32,32,32' , 'Hidden Units Per Layer')
+    cmd:option('-pools', '2,2,2,2', 'Pooling Layer Sizes')
+    cmd:option('-conv_kernels', '4,4,4,4,4', 'Kernel Sizes') -- should be size of #layers + 1
     cmd:option('-relu', true, 'use ReLU nonlinearity layers?')
     cmd:option('-dropout', 0, 'dropout rate (0-1)')
     cmd:option('-indropout', 0, 'dropout rate for input (0-1)')
     cmd:option('-num_train_imgs', 30, 'dropout rate for input (0-1)')
     cmd:option('-create_shifted_inputs',true, 'shifted downscaling')
-    cmd:option('-show_progress_bar',false)
+    cmd:option('-maxIterations',1000,'number of training epochs')
+    cmd:option('-show_progress_bar',true)
     cmd:text()
     opt = cmd:parse(arg or {})
 end
@@ -194,6 +191,10 @@ print('\n==> Creating network')
 -- Create Convolutional Network
 cnn = nn.Sequential();
 
+cnn.step_pixel = step_pixel
+cnn.patch_size = patch_size
+cnn.start_pixel= start_pixel
+
 -- Pad for convolution (EACH feature map of given input is padded with specified number of zeros)
 -- *Note*: we do padding manually during the creation of the dataset for the different image maps, so we don't need to here
 -- cnn:add(nn.SpatialZeroPadding(start_pixel-1,start_pixel-1,start_pixel-1,start_pixel-1))
@@ -244,9 +245,7 @@ model:add(nn.Flatten())
 model:add(nn.Transpose({1,2}))
 model:add(nn.LogSoftMax())
 
-model.step_pixel = step_pixel
-model.patch_size = patch_size
-model.start_pixel= start_pixel
+
 
 print(model:forward(training[1][1]):size())
 
@@ -260,7 +259,7 @@ criterion = nn.ClassNLLCriterion()
 print('\n==> Training network')
 
 trainer = nn.StochasticGradient(model, criterion)
-trainer.maxIterations = 50
+trainer.maxIterations = opt.maxIterations
 trainer.learningRate = 0.01
 curitr = 1
 
@@ -289,7 +288,7 @@ trainer.hookIteration =
         print("we got "..tostring(correct/total*100).."% correct!")
         print(correct)
         print(total)
-        local filename = 'nhu='..opt.nhu..',pools='..opt.pools..',conv_kernels='..opt.conv_kernels..',droput='..opt.dropout..',indropout='..opt.indropout..',num_images='..opt.num_train_imgs..',shifted_inputs='..tostring(opt.create_shifted_inputs)..'.net'
+        local filename = 'nhu='..opt.nhu..',pools='..opt.pools..',conv_kernels='..opt.conv_kernels..',droput='..opt.dropout..',indropout='..opt.indropout..',num_images='..opt.num_train_imgs..',shifted_inputs='..tostring(opt.create_shifted_inputs)..',randomize=true'..'.net'
         print('==> saving model to '..filename)
         torch.save(filename, cnn)
     end

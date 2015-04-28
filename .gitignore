@@ -1,4 +1,6 @@
 *.swp
 *.net
-
+*.out
+*.jpg
+.bashrc
 
