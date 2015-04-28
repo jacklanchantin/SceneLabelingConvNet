@@ -4,9 +4,7 @@ local M = require 'moses'
 
 function patch_size_finder(fs, pools, iter)
     local start
-    if iter == 1 then 
-        start = 1
-    else
+    if iter == 1 then start = 1 else
         start = patch_size_finder(fs, pools, iter-1)
     end
     for i=#fs,1,-1 do
@@ -86,23 +84,12 @@ function test_model(modelname, img, outfilename, filename)
     print("==> Testing Image "..filename)
     local model = torch.load(modelname)
 
-    conv_kernels = {4,3,5,3,5,5,}
-    pools={2, 2, 2,2 ,2}
-
-
-    patch_size = patch_size_finder(conv_kernels, pools, 1)
-    step_pixel = M.reduce(pools, function(acc,v) return acc*v end, 1) --product of pooling kernel sizes
-    start_pixel = (patch_size+1)/2
-    print("Patch size of " .. patch_size)
-    print("Step pixel is " .. step_pixel)
-    print("Start pixel is " .. start_pixel)
-    -- local start_pixel = 67
-    -- local step_pixel = 16
-
+    local patch_size = model.patch_size
+    local step_pixel = model.step_pixel
+    local start_pixel = model.start_pixel
 
     -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
     model:evaluate()
-
 
     merged = torch.ones(img:size(2), img:size(3)) --img:size(2) = 240 = y and img:size(3) = 320 = x1
 
@@ -135,22 +122,7 @@ function test_model(modelname, img, outfilename, filename)
         end
     end
 
-
-
-    --print(merged)
-
-
     local im = label2img(merged, outfilename)
-
-
-    -- local out = model:forward(img)
-    -- out = image.scale(out, out:size(3)*scale, out:size(2)*scale)
-    -- local _,labels = out:max(1)
-    -- labels = labels[1]
-
-    -- local im = label2img(labels, outfilename)
-
-
     return im
 end
 
