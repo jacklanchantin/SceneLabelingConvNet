@@ -1,3 +1,0 @@
-Shift images (use the recurrent designs)
-run shifted through in parallel table through the same CNN.
-Label the outputs that way.
